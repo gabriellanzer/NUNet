@@ -13,8 +13,11 @@ NUNet stands for (Not Unity's Network) and it is a simple to use multi-threaded 
 - Works with android builds
 - Auxiliar functions with NUNet.NUUtilities class
 - Abstract Packet class with HASH check
+- Automatic callback validation to avoid callbacks removal on object destruction
 
 ## Usage
+Check ExampleApplication folder for simple usage examples with multiple scenes.
+
 Server:
 - Start server with NUServer.Start(), starts with default ip 127.0.0.1 and port 25565
 - Listen for connections by subscribing to NUServer.onClientConnected action
