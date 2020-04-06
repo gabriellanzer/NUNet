@@ -45,6 +45,13 @@ namespace NUNet
 			set { m_onDisconnected = NUUtilities.SanitizeAction(value); }
 		}
 
+		private static Action<string> m_onServerDisconnected;
+		public static Action<string> onServerDisconnected
+		{
+			get { return m_onServerDisconnected; }
+			set { m_onServerDisconnected = NUUtilities.SanitizeAction(value); }
+		}
+
 		private static Action m_onConnectionTimeout;
 		public static Action onConnectionTimeout
 		{
@@ -71,8 +78,12 @@ namespace NUNet
 		private static List<Packet> seqDataList;
 		private static Queue<BroadcastPacket> broadcastDataQueue;
 
+		//Disconnection messages
+		private static string serverDisconnectMsg = string.Empty;
+
 		//Disconnection flags and lock for thread-safe operations
 		private static bool calledDisconnect;
+		private static bool serverDisconnected;
 		private static bool hasDisconnected;
 		private static bool hasConnected;
 		private static readonly object dataQueueLock;
@@ -393,7 +404,7 @@ namespace NUNet
 					{
 						IPEndPoint senderEP = new IPEndPoint(0, 0);
 						byte[] data = socket.Receive(ref senderEP);
-						BroadcastPacket packet = new BroadcastPacket(new Packet(data), senderEP.Address);
+						BroadcastPacket packet = new BroadcastPacket(new Packet(data, data.Length), senderEP.Address);
 						lock (broadcastDataQueueLock)
 						{
 							broadcastDataQueue.Enqueue(packet);
@@ -423,33 +434,6 @@ namespace NUNet
 				Debug.LogError("Error while sending broadcast (" + packet.data.Length + " bytes): " + ex.ToString());
 			}
 		}
-
-		//private static void EndBroadcastReceive(IAsyncResult asyncResult)
-		//{
-		//    try
-		//    {
-		//        IPEndPoint senderEP = null;
-		//        if (broadcaster == null || !broadcaster.Client.Connected)
-		//            return;
-		//        byte[] data = broadcaster.EndReceive(asyncResult, ref senderEP);
-
-		//        if(broadcaster.Available >= 0)
-		//        {
-		//            BroadcastPacket packet = new BroadcastPacket(new Packet(data), senderEP.Address);
-		//            lock (broadcastDataQueueLock)
-		//            {
-		//                broadcastDataQueue.Enqueue(packet);
-		//            }
-		//        }
-
-		//        //Keep receiving
-		//        broadcaster.BeginReceive(EndBroadcastReceive, null);
-		//    }
-		//    catch (Exception ex)
-		//    {
-		//        Debug.LogError("Error while receiving broadcast response: " + ex.Message);
-		//    }
-		//}
 
 		public static void FinishBroadcast()
 		{
@@ -874,8 +858,10 @@ namespace NUNet
 			}
 			else if ((packet.flag ^ Packet.TypeFlag.DCONNECT) == 0)
 			{
+				serverDisconnectMsg = packet.GetMessageData();
 				//Set hasDisconnected flag
 				hasDisconnected = true;
+				serverDisconnected = true;
 			}
 			else if ((packet.flag ^ Packet.TypeFlag.PING) == 0)
 			{
@@ -940,6 +926,7 @@ namespace NUNet
 			m_onConnected = NUUtilities.SanitizeAction(m_onConnected);
 			m_onConnectionFailed = NUUtilities.SanitizeAction(m_onConnectionFailed);
 			m_onDisconnected = NUUtilities.SanitizeAction(m_onDisconnected);
+			m_onServerDisconnected = NUUtilities.SanitizeAction(m_onServerDisconnected);
 			m_onConnectionTimeout = NUUtilities.SanitizeAction(m_onConnectionTimeout);
 			m_onPacketReceived = NUUtilities.SanitizeAction(m_onPacketReceived);
 
@@ -978,6 +965,12 @@ namespace NUNet
 					if (m_onDisconnected != null)
 						m_onDisconnected();
 					return;
+				}
+				if(serverDisconnected)
+				{
+					serverDisconnected = false;
+					if (m_onServerDisconnected != null)
+						m_onServerDisconnected(serverDisconnectMsg);
 				}
 				if (connectionFailed)
 				{

@@ -12,7 +12,7 @@ using NUNet.Internal;
 
 namespace NUNet
 {
-    static class NUWeb
+    public static class NUWeb
     {
         //Callbacks
         public static Action onConnected;
