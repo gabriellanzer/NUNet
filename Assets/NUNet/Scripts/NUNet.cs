@@ -167,10 +167,30 @@ namespace NUNet
 		/// Take clean packet data, packet destinations and packet message flag and build a Packet class.
 		/// </summary>
 		/// <param name="data"></param>
+		/// <param name="destinationID"></param>
+		/// <param name="messageFlag"></param>
+		public Packet(byte[] data, Guid destinationID, TypeFlag messageFlag = TypeFlag.DATA, int packetId = -1) :
+			this(data, new[] { destinationID }, messageFlag, packetId)
+		{ }
+
+		/// <summary>
+		/// Take clean packet data, packet destinations and packet message flag and build a Packet class.
+		/// </summary>
+		/// <param name="data"></param>
 		/// <param name="destinationIDs"></param>
 		/// <param name="messageFlag"></param>
 		public Packet(char[] data, Guid[] destinationIDs = null, TypeFlag messageFlag = TypeFlag.DATA, int packetId = -1) :
 			this(Encoding.ASCII.GetBytes(data), destinationIDs, messageFlag, packetId)
+		{ }
+
+		/// <summary>
+		/// Take clean packet data, packet destinations and packet message flag and build a Packet class.
+		/// </summary>
+		/// <param name="data"></param>
+		/// <param name="destinationID"></param>
+		/// <param name="messageFlag"></param>
+		public Packet(char[] data, Guid destinationID, TypeFlag messageFlag = TypeFlag.DATA, int packetId = -1) :
+			this(Encoding.ASCII.GetBytes(data), new[] { destinationID }, messageFlag, packetId)
 		{ }
 
 		/// <summary>
@@ -184,6 +204,16 @@ namespace NUNet
 		{ }
 
 		/// <summary>
+		/// Take a string message, packet destinations and packet message flag and build a Packet class.
+		/// </summary>
+		/// <param name="msg"></param>
+		/// <param name="destinationID"></param>
+		/// <param name="messageFlag"></param>
+		public Packet(string msg, Guid destinationID, TypeFlag messageFlag = TypeFlag.DATA, int packetId = -1) :
+			this(Encoding.ASCII.GetBytes(msg), new[] { destinationID }, messageFlag, packetId)
+		{ }
+
+		/// <summary>
 		/// Take an int value, packet destinations and packet message flag and build a Packet class
 		/// </summary>
 		/// <param name="obj"></param>
@@ -194,6 +224,16 @@ namespace NUNet
 		{ }
 
 		/// <summary>
+		/// Take an int value, packet destinations and packet message flag and build a Packet class
+		/// </summary>
+		/// <param name="obj"></param>
+		/// <param name="destinationID"></param>
+		/// <param name="messageFlag"></param>
+		public Packet(int value, Guid destinationID, TypeFlag messageFlag = TypeFlag.DATA, int packetId = -1) :
+			this(NUUtilities.GetBytes(value), new[] { destinationID }, messageFlag, packetId)
+		{ }
+
+		/// <summary>
 		/// Take any object to serialize as byte array, packet destinations and packet message flag and build a Packet class
 		/// </summary>
 		/// <param name="obj"></param>
@@ -201,6 +241,16 @@ namespace NUNet
 		/// <param name="messageFlag"></param>
 		public Packet(object obj, Guid[] destinationIDs = null, TypeFlag messageFlag = TypeFlag.DATA, int packetId = -1) :
 			this(NUUtilities.GetBytes(obj), destinationIDs, messageFlag, packetId)
+		{ }
+
+		/// <summary>
+		/// Take any object to serialize as byte array, packet destinations and packet message flag and build a Packet class
+		/// </summary>
+		/// <param name="obj"></param>
+		/// <param name="destinationID"></param>
+		/// <param name="messageFlag"></param>
+		public Packet(object obj, Guid destinationID, TypeFlag messageFlag = TypeFlag.DATA, int packetId = -1) :
+			this(NUUtilities.GetBytes(obj), new[] { destinationID }, messageFlag, packetId)
 		{ }
 
 		public void OverrideDestination(Guid[] guid)

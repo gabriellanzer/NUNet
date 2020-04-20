@@ -91,199 +91,175 @@ namespace NUNet
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Guid GetGuid(byte[] buffer)
+        public static int GetInt32(byte[] bytes)
         {
-            if (buffer.Length < 16)
-            {
-                Debug.LogErrorFormat("Buffer doesn't contain a GUID, because it's length is " + buffer.Length);
-                return Guid.Empty;
-            }
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer);
-            return new Guid(buffer);
+                Array.Reverse(bytes);
+            return BitConverter.ToInt32(bytes, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Guid GetGuid(byte[] buffer, ref int offset)
-        {
-            byte[] guidBuf = new byte[16];
-            Array.Copy(buffer, offset, guidBuf, 0, 16);
-            if (!BitConverter.IsLittleEndian)
-                Array.Reverse(guidBuf, 0, 16);
-            offset += 16;
-            return new Guid(guidBuf);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetInt32(byte[] buffer)
+        public static int GetInt32(byte[] bytes, ref int offset)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer);
-            return BitConverter.ToInt32(buffer, 0);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetInt32(byte[] buffer, ref int offset)
-        {
+                Array.Reverse(bytes, offset, sizeof(int));
+            int val = BitConverter.ToInt32(bytes, offset);
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(int));
-            int val = BitConverter.ToInt32(buffer, offset);
-            if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(int));
+                Array.Reverse(bytes, offset, sizeof(int));
             offset += sizeof(int);
             return val;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint GetUInt32(byte[] buffer)
+        public static uint GetUInt32(byte[] bytes)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer);
-            return BitConverter.ToUInt32(buffer, 0);
+                Array.Reverse(bytes);
+            return BitConverter.ToUInt32(bytes, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint GetUInt32(byte[] buffer, ref int offset)
+        public static uint GetUInt32(byte[] bytes, ref int offset)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(uint));
-            uint val = BitConverter.ToUInt32(buffer, offset);
+                Array.Reverse(bytes, offset, sizeof(uint));
+            uint val = BitConverter.ToUInt32(bytes, offset);
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(uint));
+                Array.Reverse(bytes, offset, sizeof(uint));
             offset += sizeof(uint);
             return val;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float GetSingle(byte[] buffer)
+        public static float GetSingle(byte[] bytes)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer);
-            return BitConverter.ToSingle(buffer, 0);
+                Array.Reverse(bytes);
+            return BitConverter.ToSingle(bytes, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float GetSingle(byte[] buffer, ref int offset)
+        public static float GetSingle(byte[] bytes, ref int offset)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(float));
-            float val = BitConverter.ToSingle(buffer, offset);
+                Array.Reverse(bytes, offset, sizeof(float));
+            float val = BitConverter.ToSingle(bytes, offset);
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(float));
+                Array.Reverse(bytes, offset, sizeof(float));
             offset += sizeof(float);
             return val;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static short GetInt16(byte[] buffer)
+        public static short GetInt16(byte[] bytes)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer);
-            return BitConverter.ToInt16(buffer, 0);
+                Array.Reverse(bytes);
+            return BitConverter.ToInt16(bytes, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static short GetInt16(byte[] buffer, ref int offset)
+        public static short GetInt16(byte[] bytes, ref int offset)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(short));
-            short val = BitConverter.ToInt16(buffer, offset);
+                Array.Reverse(bytes, offset, sizeof(short));
+            short val = BitConverter.ToInt16(bytes, offset);
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(short));
+                Array.Reverse(bytes, offset, sizeof(short));
             offset += sizeof(short);
             return val;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GetBool(byte[] buffer)
+        public static bool GetBool(byte[] bytes)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer);
-            return BitConverter.ToBoolean(buffer, 0);
+                Array.Reverse(bytes);
+            return BitConverter.ToBoolean(bytes, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GetBool(byte[] buffer, ref int offset)
+        public static bool GetBool(byte[] bytes, ref int offset)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(bool));
-            bool val = BitConverter.ToBoolean(buffer, offset);
+                Array.Reverse(bytes, offset, sizeof(bool));
+            bool val = BitConverter.ToBoolean(bytes, offset);
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(bool));
+                Array.Reverse(bytes, offset, sizeof(bool));
             offset += sizeof(bool);
             return val;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ushort GetUInt16(byte[] buffer)
+        public static ushort GetUInt16(byte[] bytes)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer);
-            return BitConverter.ToUInt16(buffer, 0);
+                Array.Reverse(bytes);
+            return BitConverter.ToUInt16(bytes, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ushort GetUInt16(byte[] buffer, ref int offset)
+        public static ushort GetUInt16(byte[] bytes, ref int offset)
         {
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(ushort));
-            ushort val = BitConverter.ToUInt16(buffer, offset);
+                Array.Reverse(bytes, offset, sizeof(ushort));
+            ushort val = BitConverter.ToUInt16(bytes, offset);
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(buffer, offset, sizeof(ushort));
+                Array.Reverse(bytes, offset, sizeof(ushort));
             offset += sizeof(ushort);
             return val;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 GetVector3(byte[] buffer)
+        public static Vector3 GetVector3(byte[] bytes)
         {
             int offset = 0;
-            return GetVector3(buffer, ref offset);
+            return GetVector3(bytes, ref offset);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 GetVector3(byte[] buffer, ref int offset)
+        public static Vector3 GetVector3(byte[] bytes, ref int offset)
         {
             return new Vector3(
-                GetSingle(buffer, ref offset),
-                GetSingle(buffer, ref offset),
-                GetSingle(buffer, ref offset)
+                GetSingle(bytes, ref offset),
+                GetSingle(bytes, ref offset),
+                GetSingle(bytes, ref offset)
                 );
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion GetQuaternion(byte[] buffer)
+        public static Quaternion GetQuaternion(byte[] bytes)
         {
             int offset = 0;
-            return GetQuaternion(buffer, ref offset);
+            return GetQuaternion(bytes, ref offset);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion GetQuaternion(byte[] buffer, ref int offset)
+        public static Quaternion GetQuaternion(byte[] bytes, ref int offset)
         {
             return new Quaternion(
-                GetSingle(buffer, ref offset),
-                GetSingle(buffer, ref offset),
-                GetSingle(buffer, ref offset),
-                GetSingle(buffer, ref offset)
+                GetSingle(bytes, ref offset),
+                GetSingle(bytes, ref offset),
+                GetSingle(bytes, ref offset),
+                GetSingle(bytes, ref offset)
                 ); ;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte[] GetBytes(Guid guid)
+        public static byte[] GetBytes(bool value)
         {
-            byte[] guidBytes = guid.ToByteArray();
+            byte[] boolBytes = BitConverter.GetBytes(value);
             if (!BitConverter.IsLittleEndian)
-                Array.Reverse(guidBytes);
-            return guidBytes;
+                Array.Reverse(boolBytes);
+            return boolBytes;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SerializeToBuffer(Guid value, byte[] buffer, ref int offset)
+        public static void SerializeToBuffer(bool value, byte[] buffer, ref int offset)
         {
-            byte[] intBytes = GetBytes(value);
-            intBytes.CopyTo(buffer, offset);
-            offset += 16;
+            byte[] boolBytes = GetBytes(value);
+            boolBytes.CopyTo(buffer, offset);
+            offset += sizeof(bool);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -442,6 +418,27 @@ namespace NUNet
             GetBytes(quaternion.z).CopyTo(buffer, offset + sizeof(float) * 2);
             GetBytes(quaternion.w).CopyTo(buffer, offset + sizeof(float) * 3);
             offset += sizeof(float) * 4;
+        }
+
+        public static Guid GetGuid(byte[] buffer)
+        {
+            if (buffer.Length < 16)
+            {
+                Debug.LogErrorFormat("Buffer doesn't contain a GUID, because it's length is " + buffer.Length);
+                return Guid.Empty;
+            }
+            byte[] guidBytes = new byte[16];
+            buffer.CopyTo(guidBytes, buffer.Length - 16);
+
+            return new Guid(guidBytes);
+        }
+
+        public static Guid GetGuid(byte[] buffer, ref int offset)
+        {
+            byte[] guidBuf = new byte[16];
+            Array.Copy(buffer, offset, guidBuf, 0, 16);
+            offset += 16;
+            return new Guid(guidBuf);
         }
 
         public static int GetGuidAndPort(byte[] buffer, out Guid guid)
