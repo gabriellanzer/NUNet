@@ -53,18 +53,6 @@ public class NetworkAppManager : MonoBehaviour
 	private void ClientConnected(Guid id)
 	{
 		connectedPlayers.Add(id);
-		Packet firstPacket = new Packet("First", packetId: NUUtilities.GeneratePacketId());
-		Packet secondPacket = new Packet("Second", packetId: NUUtilities.GeneratePacketId());
-		Packet thirdPacket = new Packet("Third", packetId: NUUtilities.GeneratePacketId());
-		Debug.LogError("Third");
-		Debug.LogError("Second");
-		Debug.LogError("First");
-		thirdPacket.OverrideDestination(NUServer.GetConnectedClients());
-		NUServer.SendReliableSequenced(thirdPacket);    //Send third first
-		secondPacket.OverrideDestination(NUServer.GetConnectedClients());
-		NUServer.SendReliableSequenced(secondPacket);   //Send second second
-		firstPacket.OverrideDestination(NUServer.GetConnectedClients());
-		NUServer.SendReliableSequenced(firstPacket);    //Then first third
 	}
 
 	private void ClientReconnected(Guid id)
@@ -86,29 +74,29 @@ public class NetworkAppManager : MonoBehaviour
 			NUServer.SendUnreliable(stateData);
 		}
 
-		if (Input.GetKeyUp(KeyCode.O) && NUClient.connected)
+		// Test for multipart (really big) packet
+		if (Input.GetKeyUp(KeyCode.I))
 		{
-			byte[] reandomBuffer = new byte[8192];
+			byte[] randomBuffer = new byte[8192];
 			for (int i = 0; i < 8192; i++)
 			{
-				reandomBuffer[i] = (byte)(Random.Range(0, 255));
+				randomBuffer[i] = (byte)(Random.Range(0, 255));
 			}
-			Packet multipartTestPacket = new Packet(reandomBuffer);
-			NUClient.SendReliable(multipartTestPacket);
-		}
 
-		if (Input.GetKeyUp(KeyCode.I) && NUServer.started)
-		{
-			byte[] reandomBuffer = new byte[8192];
-			for (int i = 0; i < 8192; i++)
+			if(NUServer.started)
 			{
-				reandomBuffer[i] = (byte)(Random.Range(0, 255));
+				Packet multipartTestPacket = new Packet(randomBuffer,
+					NUServer.GetConnectedClients(), Packet.TypeFlag.DATA);
+				NUServer.SendReliable(multipartTestPacket);
 			}
-			Packet multipartTestPacket = new Packet(reandomBuffer,
-				NUServer.GetConnectedClients(), Packet.TypeFlag.DATA);
-			NUServer.SendReliable(multipartTestPacket);
+			else if(NUClient.connected)
+			{
+				Packet multipartTestPacket = new Packet(randomBuffer);
+				NUClient.SendReliable(multipartTestPacket);
+			}
 		}
 
+		// Test for sequenced packet
 		if (Input.GetKeyUp(KeyCode.J))
 		{
 			Packet firstPacket = new Packet("First", packetId: NUUtilities.GeneratePacketId());
@@ -218,6 +206,7 @@ public class NetworkAppManager : MonoBehaviour
 			}
 		}
 
+		// Debug sequenced packet test
 		if (packet.id >= 0)
 		{
 			Debug.LogError(msg);
@@ -294,6 +283,7 @@ public class NetworkAppManager : MonoBehaviour
 			}
 		}
 
+		// Debug sequenced packet test
 		if (packet.id >= 0)
 		{
 			Debug.LogError(msg);
