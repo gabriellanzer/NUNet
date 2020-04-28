@@ -277,6 +277,10 @@ namespace NUNet
                 }
                 catch (Exception ex)
                 {
+                    // Cleanup
+                    broadcaster?.Close();
+                    listener?.Stop();
+
                     Debug.LogError("Could not initialize server, error: " + ex.ToString());
                     if (m_onServerStarted != null)
                     {

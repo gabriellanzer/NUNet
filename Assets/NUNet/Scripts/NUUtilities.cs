@@ -607,6 +607,8 @@ namespace NUNet
 
         public const int MultiPartDataHeaderSize = 4/*Packet ID*/ + 16/*Origin Packet Hash*/ + 4/*Origin Packet Size*/ + 4/*Packets Count*/;
 
+        public const int MaxPacketSize = (MTU - PacketHeaderSize);
+
         public const int MaxMultiPartPacketSize = (MTU - MultiPartDataHeaderSize - PacketHeaderSize);
 
         public static readonly char[] invalidCallbackChars = new[] { '<', '>' };
