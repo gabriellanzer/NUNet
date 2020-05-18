@@ -22,33 +22,34 @@ namespace NUNet
 			GUID = 0x01,        //Guid Handshakes
 			PING = 0x02,        //Ping processing
 			DCONNECT = 0x03,    //Disconnections
-			MPARTDATA = 0x04    //Multipart Data Packet
+			MPARTDATA = 0x04,   //Multipart Data Packet
+			BROADCAST = 0x05,   //Broadcast Data Packet
 		}
 
 		/// <summary>
 		/// The Packet Flag
 		/// </summary>
-		public readonly TypeFlag flag;
+		public TypeFlag flag { get; private set; }
 
 		/// <summary>
 		/// Raw Packet data.
 		/// </summary>
-		public readonly byte[] data;
+		public byte[] data { get; private set; }
 
 		/// <summary>
 		/// Entire packet size, used for TCP stream splitting.
 		/// </summary>
-		public readonly int packetSize;
+		public int packetSize { get; private set; }
 
 		/// <summary>
 		/// Packet id, used for sequential message sending.
 		/// </summary>
-		public int id;
+		public int id { get; private set; }
 
 		/// <summary>
 		/// The size of the data without protocol flag.
 		/// </summary>
-		public readonly int cleanSize;
+		public int cleanSize { get; private set; }
 
 		/// <summary>
 		/// Array of <see cref="Guid"/>s for the recipients of this packet.
@@ -58,7 +59,7 @@ namespace NUNet
 		/// <summary>
 		/// Hash of this packet bytes.
 		/// </summary>
-		public Hash hash { private set; get; }
+		public Hash hash { get; private set; }
 
 		/// <summary>
 		/// Takes a Packet Raw data (with flag!) and builds a Packet structure from it.
@@ -284,6 +285,26 @@ namespace NUNet
 			this.hash.data.CopyTo(this.data, 4);
 		}
 
+		public void OverridePacketFlag(TypeFlag messageFlag)
+		{
+			//Override message flag
+			this.data[20] = (byte)messageFlag;
+			this.flag = messageFlag;
+
+			//Make sure hash data in buffer is clear
+			//to enable comparations on the receiver
+			for (int i = 0; i < 16; i++)
+			{
+				this.data[4 + i] = (byte)0;
+			}
+
+			//Recalculate Hash Code
+			this.hash = new Hash(this.data);
+
+			//Copy to packet buffer
+			this.hash.data.CopyTo(this.data, 4);
+		}
+
 		public byte[] GetCleanData()
 		{
 			byte[] cleanData = new byte[this.cleanSize];
@@ -323,12 +344,14 @@ namespace NUNet
 	public struct BroadcastPacket
 	{
 		public readonly Packet packet;
-		public readonly IPAddress origin;
+		public readonly IPAddress senderIp;
+		public readonly int senderPort;
 
-		public BroadcastPacket(Packet packet, IPAddress origin)
+		public BroadcastPacket(Packet packet, IPEndPoint senderEp)
 		{
 			this.packet = packet;
-			this.origin = origin;
+			this.senderIp = senderEp.Address;
+			this.senderPort = senderEp.Port;
 		}
 	}
 
@@ -671,6 +694,22 @@ namespace NUNet.Internal
 			this.data = new byte[bufferSize];
 			this.socket = socket;
 			this.client = client;
+			this.callback = callback;
+		}
+	}
+
+	public struct BroadcastTransmissionState
+	{
+		public byte[] data;
+		public Socket broadcaster;
+		public EndPoint senderEp;
+		public Action callback;
+
+		public BroadcastTransmissionState(int bufferSize, ref Socket broadcaster, Action callback = null)
+		{
+			this.data = new byte[bufferSize];
+			this.broadcaster = broadcaster;
+			this.senderEp = new IPEndPoint(IPAddress.Any, 0);
 			this.callback = callback;
 		}
 	}

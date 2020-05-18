@@ -12,6 +12,7 @@ using UnityEngine;
 
 //NUNet Includes
 using NUNet.Internal;
+using UnityEngine.UIElements;
 
 namespace NUNet
 {
@@ -73,22 +74,22 @@ namespace NUNet
 			set { m_onBroadcastResponse = NUUtilities.SanitizeAction(value); }
 		}
 
-		//Data queues for callbacks on main-thread
+		//Pool of received Packets
+		private static readonly object dataQueueLock;
 		private static Queue<Packet> dataQueue;
+		private static readonly object seqDataQueueLock;
 		private static List<Packet> seqDataList;
+		private static readonly object broadcastDataQueueLock;
 		private static Queue<BroadcastPacket> broadcastDataQueue;
 
-		//Disconnection messages
-		private static string serverDisconnectMsg = string.Empty;
-
-		//Disconnection flags and lock for thread-safe operations
+		//Flags for thread-safe operations
 		private static bool calledDisconnect;
 		private static bool serverDisconnected;
 		private static bool hasDisconnected;
 		private static bool hasConnected;
-		private static readonly object dataQueueLock;
-		private static readonly object seqDataQueueLock;
-		private static readonly object broadcastDataQueueLock;
+
+		//Disconnection messages
+		private static string serverDisconnectMsg = string.Empty;
 
 		//Index of the last received sequential packet
 		private static int lastPacketId;
@@ -98,7 +99,10 @@ namespace NUNet
 		private static Dictionary<Hash, MultiPartBuffer> multiPartBuffers;
 
 		//UDP Socket handler for Broadcasting operations
-		private static IPEndPoint broadcastEP;
+		private static Socket broadcaster = null;
+		private static UInt32 broadcastStartRange;
+		private static UInt32 broadcastFinalRange;
+		private static ushort broadcastServerPort = 0;
 
 		//MonoBehaviour instance of client component
 		private static NUClientComponent clientComponent;
@@ -120,7 +124,8 @@ namespace NUNet
 			multiPartBuffers = null;
 			multiPartLock = new object();
 			clientComponent = null;
-			broadcastEP = null;
+			broadcaster = null;
+			broadcastServerPort = 0;
 			lastPacketId = -1;
 		}
 
@@ -327,19 +332,36 @@ namespace NUNet
 		/// </summary>
 		/// <param name="adapterAddress">The Network Adapter address to be used for broadcasting.
 		/// See <see cref="NUUtilities.ListIPv4Addresses()"/> for valid sources.</param>
-		/// <param name="port">The port in which the broadcast will happen.</param>
-		public static void SetupBroadcast(IPAddress adapterAddress = null, ushort port = 56552, Action updateHook = null,
+		/// <param name="broadcastPort">The port in which the broadcast will happen.</param>
+		public static void SetupBroadcast(IPAddress adapterAddress = null, ushort broadcastServerPort = 56552, Action updateHook = null,
 			int reservedBufferedPackets = NUUtilities.MaxBufferedPackets)
 		{
 			//Loopback address if none are given
 			if (adapterAddress == null)
 				adapterAddress = IPAddress.Loopback;
+			NUClient.broadcastServerPort = broadcastServerPort;
 
-			broadcastEP = new IPEndPoint(NUUtilities.GetBroadcastFromIPv4(adapterAddress), port);
+			// Setup broadcast ranges and receiving queue
+			IPAddress subnet = NUUtilities.GetSubnetMaskFromIPv4(adapterAddress);
+			UInt32 subnetInt = NUUtilities.GetUIntFromIpAddress(subnet);
+			UInt32 addressInt = NUUtilities.GetUIntFromIpAddress(adapterAddress);
+			broadcastStartRange = (addressInt & subnetInt) + 1;
+			broadcastFinalRange = (addressInt | (~subnetInt)) - 1;
 			lock (broadcastDataQueueLock)
 			{
 				broadcastDataQueue = new Queue<BroadcastPacket>(reservedBufferedPackets);
 			}
+			IPEndPoint broadcastEp = new IPEndPoint(adapterAddress, 0);
+			broadcaster = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
+			{
+				ExclusiveAddressUse = true
+			};
+			broadcaster.Bind(broadcastEp);
+			BroadcastTransmissionState broadcastState = new BroadcastTransmissionState(
+					NUUtilities.MTU, ref broadcaster, null);
+			EndPoint broadcastSenderEp = broadcastState.senderEp;
+			broadcaster.BeginReceiveFrom(broadcastState.data, 0, NUUtilities.MTU, SocketFlags.None,
+				ref broadcastSenderEp, new AsyncCallback(EndBroadcastReceive), broadcastState);
 
 			//Hook on updateHook otherwise instantiate NUClientComponent
 			if (updateHook != null)
@@ -365,9 +387,9 @@ namespace NUNet
 		/// Broadcast a Packet (whose destination doesn't matter)
 		/// </summary>
 		/// <param name="emptyDestinationPacket">An packet whose destination doesn't matter</param>
-		public static void Broadcast(Packet emptyDestinationPacket)
+		public static void Broadcast(Packet emptyDestinationPacket, Action callback = null)
 		{
-			if (broadcastEP == null)
+			if (broadcaster == null)
 			{
 				Debug.LogWarning("Broadcast not configured! Using default settings...\n" +
 					"Call NUClient.SetupBroadcast() with corrent parameters.");
@@ -386,58 +408,100 @@ namespace NUNet
 				return;
 			}
 
-			UdpClient broadcaster = new UdpClient();
-			broadcaster.EnableBroadcast = true;
-			broadcaster.DontFragment = true;
-			broadcaster.Client.ReceiveTimeout = 1000;
-
-			broadcaster.BeginSend(emptyDestinationPacket.data, emptyDestinationPacket.data.Length,
-				broadcastEP, new AsyncCallback(EndBroadcastSend), broadcaster);
-
-			//broadcaster.BeginReceive(EndBroadcastReceive, null);
-			Thread thread = new Thread((object brdcaster) =>
+			// Set Broadcast Flag if not already
+			if (emptyDestinationPacket.flag != Packet.TypeFlag.BROADCAST)
 			{
-				UdpClient socket = (UdpClient)brdcaster;
-				while (true)
-				{
-					try
-					{
-						IPEndPoint senderEP = new IPEndPoint(0, 0);
-						byte[] data = socket.Receive(ref senderEP);
-						BroadcastPacket packet = new BroadcastPacket(new Packet(data, data.Length), senderEP.Address);
-						lock (broadcastDataQueueLock)
-						{
-							broadcastDataQueue.Enqueue(packet);
-						}
-					}
-					catch
-					{
-						socket.Close();
-						socket = null;
-					}
-				}
-			});
-			thread.Start(broadcaster);
+				emptyDestinationPacket.OverridePacketFlag(Packet.TypeFlag.BROADCAST);
+			}
+
+			BroadcastTransmissionState transmissionState = new BroadcastTransmissionState(
+				emptyDestinationPacket.data.Length, ref broadcaster, callback);
+
+			// Send a broadcast transmission to the full range of IPs range
+			IPEndPoint receivingEp = (IPEndPoint)broadcaster.LocalEndPoint;
+			for (uint ip = broadcastStartRange + 1; ip < broadcastFinalRange; ip++)
+			{
+				IPAddress broadcastIp = NUUtilities.GetIpAddressFromUInt32(ip);
+				IPEndPoint broadcastEp = new IPEndPoint(broadcastIp, broadcastServerPort);
+
+				broadcaster.BeginSendTo(emptyDestinationPacket.data, 0, emptyDestinationPacket.data.Length,
+					SocketFlags.None, broadcastEp, new AsyncCallback(EndBroadcastSend), transmissionState);
+			}
 		}
 
 		//When finished broadcast send
 		private static void EndBroadcastSend(IAsyncResult asyncResult)
 		{
+			//Extract UnreliableTransmissionState from Async State
+			BroadcastTransmissionState transmissionState = (BroadcastTransmissionState)asyncResult.AsyncState;
+			Socket broadcaster = transmissionState.broadcaster;
+
 			try
 			{
-				UdpClient broadcaster = (UdpClient)asyncResult.AsyncState;
 				broadcaster.EndSend(asyncResult);
+
+				//Callback of transmission state
+				if (transmissionState.callback != null)
+					transmissionState.callback();
 			}
 			catch (Exception ex)
 			{
-				Packet packet = (Packet)asyncResult.AsyncState;
-				Debug.LogError("Error while sending broadcast (" + packet.data.Length + " bytes): " + ex.ToString());
+				if (ex.GetType() == typeof(ObjectDisposedException) || broadcaster == null || !broadcaster.IsBound)
+					return;
+
+				Debug.LogError("Error sending unreliable packet to server: " + ex);
+			}
+		}
+
+		private static void EndBroadcastReceive(IAsyncResult asyncResult)
+		{
+			//Extract UDPClient from Async State
+			BroadcastTransmissionState broadcastState = (BroadcastTransmissionState)asyncResult.AsyncState;
+			Socket broadcaster = broadcastState.broadcaster;
+
+			try
+			{
+				//End receiving data
+				int receivedSize = broadcaster.EndReceiveFrom(asyncResult, ref broadcastState.senderEp);
+
+				if (receivedSize > 0)
+				{
+					//Get Message flag and process accordingly
+					Packet receivedPacket = new Packet(broadcastState.data, receivedSize);
+
+					//Ignore packets that are not valid in our broadcast routines
+					if (receivedPacket.flag == Packet.TypeFlag.BROADCAST)
+					{
+						BroadcastPacket broadcastPacket = new BroadcastPacket(receivedPacket, 
+							(IPEndPoint)broadcastState.senderEp);
+						lock (broadcastDataQueueLock)
+						{
+							broadcastDataQueue.Enqueue(broadcastPacket);
+						}
+					}
+				}
+
+				//Keep receiving data
+				broadcaster.BeginReceiveFrom(broadcastState.data, 0, NUUtilities.MTU, SocketFlags.None,
+					ref broadcastState.senderEp, new AsyncCallback(EndBroadcastReceive), broadcastState);
+
+			}
+			catch (Exception ex)
+			{
+				if (ex.GetType() == typeof(ObjectDisposedException) || broadcaster == null || !broadcaster.IsBound)
+					return;
+
+				Debug.LogError("Error occurred receiving broadcast packet: " + ex.Message);
+
+				//Keep receiving data (because one connection error should not eliminate other responses)
+				broadcaster.BeginReceiveFrom(broadcastState.data, 0, NUUtilities.MTU, SocketFlags.None,
+					ref broadcastState.senderEp, new AsyncCallback(EndBroadcastReceive), broadcastState);
 			}
 		}
 
 		public static void FinishBroadcast()
 		{
-			broadcastEP = null;
+			broadcaster.Close();
 			lock (broadcastDataQueueLock)
 			{
 				if (broadcastDataQueue != null)
@@ -966,7 +1030,7 @@ namespace NUNet
 						m_onDisconnected();
 					return;
 				}
-				if(serverDisconnected)
+				if (serverDisconnected)
 				{
 					serverDisconnected = false;
 					if (m_onServerDisconnected != null)
@@ -996,7 +1060,7 @@ namespace NUNet
 			}
 
 			//Process broadcast callbacks
-			if (broadcastEP != null)
+			if (broadcaster != null)
 			{
 				//Process broadcast callbacks
 				lock (broadcastDataQueueLock)

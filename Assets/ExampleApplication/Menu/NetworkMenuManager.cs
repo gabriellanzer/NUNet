@@ -95,8 +95,8 @@ public class NetworkMenuManager : MonoBehaviour
     public void ServerFound(BroadcastPacket brdPacket)
     {
         //Extract port from package
-        ushort port = ushort.Parse(brdPacket.packet.GetMessageData());
-        IPEndPoint endPoint = new IPEndPoint(brdPacket.origin, (int)port);
+        ushort port = NUUtilities.GetUInt16(brdPacket.packet.GetCleanData());
+        IPEndPoint endPoint = new IPEndPoint(brdPacket.senderIp, port);
 
         //Try to add server
         if (!availableServers.Add(endPoint))
@@ -107,7 +107,7 @@ public class NetworkMenuManager : MonoBehaviour
 
         Text[] texts = serverEntry.GetComponentsInChildren<Text>();
         //Update IPAddress
-        texts[0].text = brdPacket.origin.ToString();
+        texts[0].text = brdPacket.senderIp.ToString();
         //Update Port
         texts[1].text = port.ToString();
 
