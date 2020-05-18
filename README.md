@@ -14,6 +14,7 @@ NUNet stands for (Not Unity's Network) and it is a simple to use multi-threaded 
 - Auxiliar functions with NUNet.NUUtilities class
 - Abstract Packet class with HASH check
 - Automatic callback validation to avoid callbacks removal on object destruction
+- Broadcast working through UDP Unicast protocol (for more compatibility)
 
 ## Usage
 Check ExampleApplication folder for simple usage examples with multiple scenes.
@@ -33,7 +34,6 @@ Client:
 - Close connection with NUClient.Disconnect()
 
 ## WIP
-- UDP Broadcast
 - Web API
 - Custom game-loop hook points
 - Max queued packets
