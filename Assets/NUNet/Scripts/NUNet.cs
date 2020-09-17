@@ -370,13 +370,13 @@ namespace NUNet
 			int headersIndex = -1;
 			for (int i = 0; i < data.Length - headersTerminator.Length; i++)
 			{
-				bool found = true;
+				int diffMask = 0;
 				for (int j = 0; j < headersTerminator.Length; j++)
 				{
-					found &= (data[i + j] == headersTerminator[j]);
+					diffMask |= (data[i + j] ^ headersTerminator[j]);
 				}
 
-				if (found)
+				if (diffMask == 0)
 				{
 					headersIndex = i;
 					break;
@@ -504,6 +504,8 @@ namespace NUNet
 			this.data = md5Hash.ComputeHash(data);
 		}
 
+		public Hash(string message) : this(Encoding.ASCII.GetBytes(message)) { }
+
 		public override string ToString()
 		{
 			StringBuilder sb = new StringBuilder(32);
@@ -527,27 +529,27 @@ namespace NUNet
 			}
 		}
 
-		private sealed class HashComparer : IEqualityComparer<Hash>
+		public sealed class HashComparer : IEqualityComparer<Hash>
 		{
-			//public bool Equals(Hash x, Hash y)
-			//{
-			//    int test = 0;
-			//    for (int i = 0; i < 16; i++)
-			//    {
-			//        test |= (x.data[i] ^ y.data[i]);
-			//    }
-			//    return test == 0;
-			//}
-
 			public bool Equals(Hash x, Hash y)
 			{
+				int test = 0;
 				for (int i = 0; i < 16; i++)
 				{
-					if (x.data[i] != y.data[i])
-						return false;
+					test |= (x.data[i] ^ y.data[i]);
 				}
-				return true;
+				return test == 0;
 			}
+
+			//public bool Equals(Hash x, Hash y)
+			//{
+			//	for (int i = 0; i < 16; i++)
+			//	{
+			//		if (x.data[i] != y.data[i])
+			//			return false;
+			//	}
+			//	return true;
+			//}
 
 			public int GetHashCode(Hash obj)
 			{

@@ -1248,7 +1248,7 @@ namespace NUNet
 					foreach (var kv in clients)
 					{
 						/*Send disconnect packet with blockable function call
-                         * to make sure it ends before application exit!*/
+						 * to make sure it ends before application exit!*/
 						NUClientInfo client = kv.Value;
 						if (client.connected)
 						{

@@ -11,13 +11,37 @@ using StackTrace = System.Diagnostics.StackTrace;
 using StackFrame = System.Diagnostics.StackFrame;
 
 using UnityEngine;
-using JetBrains.Annotations;
 
 namespace NUNet
 {
 	//Utilities used all around the NUNet code
 	public static class NUUtilities
 	{
+		private static byte[,] hexaToBytesMap = new byte[23, 23];
+
+		static NUUtilities()
+		{
+			// Initialize hexa chars to bytes decode table
+			for (int i = 0; i < 23; i++)
+			{
+				if (i > 9 && i < 17)
+				{
+					continue;
+				}
+
+				for (int j = 0; j < 23; j++)
+				{
+					if (j > 9 && j < 17)
+					{
+						continue;
+					}
+
+					string ijChars = new string(new[] { (char)(i + 48), (char)(j + 48) });
+					hexaToBytesMap[i, j] = Convert.ToByte(ijChars, 16);
+				}
+			}
+		}
+
 		public static List<IPAddress> ListIPv4Addresses()
 		{
 			IPAddress[] addresses = Dns.GetHostAddresses(Dns.GetHostName());
@@ -466,6 +490,18 @@ namespace NUNet
 			Array.Copy(buffer, 0, partIdData, 0, 4);
 			return GetInt32(partIdData);
 		}
+
+		public static byte[] GetHashBytes(string hashMsg)
+		{
+			int length = hashMsg.Length / 2;
+			byte[] bytes = new byte[length];
+			for (int i = 0; i < length; i++)
+			{
+				bytes[i] = hexaToBytesMap[hashMsg[i * 2 + 0] - 48, hashMsg[i * 2 + 1] - 48];
+			}
+			return bytes;
+		}
+
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static byte[] GetGuidAndPortBuffer(Guid guid, ushort port)
