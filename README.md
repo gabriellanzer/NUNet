@@ -42,7 +42,7 @@ Client:
 - Meet-up Master Server and Routines (using NodeJS)
 - NAT Punch-through
 
-## Knwown Limitations
+## Known Limitations
 - Won't work on big-endian systems
 
 ---
